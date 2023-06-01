@@ -227,6 +227,7 @@ RUN apt-get -y update && \
 # Install gdb for native debugging
 RUN apt-get -y update && \
 	apt-get -y upgrade && \
-	apt-get install --no-install-recommends -y gdb
+	apt-get install --no-install-recommends -y gdb && \
+	apt-get install usbutils
 
 ENV ZEPHYR_BASE=/zephyrproject/zephyr
