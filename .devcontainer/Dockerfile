@@ -228,6 +228,7 @@ RUN apt-get -y update && \
 RUN apt-get -y update && \
 	apt-get -y upgrade && \
 	apt-get install --no-install-recommends -y gdb && \
-	apt-get install usbutils
+	apt-get install usbutils \
+	apt install linux-tools-virtual hwdata
 
 ENV ZEPHYR_BASE=/zephyrproject/zephyr

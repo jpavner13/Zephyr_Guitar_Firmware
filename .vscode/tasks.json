@@ -1,0 +1,235 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build (Debug)",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"linux": {
+				"command": "west",
+				"args": [
+					"build",
+					"-b",
+					"${config:BOARD}",
+					"${config:PROJECT}",
+					"--",
+					"-DOVERLAY_CONFIG=\"${workspaceFolder}/app/debug.conf;${workspaceFolder}/app/overlay-fs-log.conf\"",
+					"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+				]
+			},
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Build Bootloader",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"linux": {
+				"command": "west",
+				"args": [
+					"build",
+					"-b",
+					"${config:BOARD}",
+					"-d",
+					"build_mcuboot",
+					"/zephyrproject/bootloader/mcuboot/boot/zephyr",
+					"--",
+					"-DBOARD_ROOT=${workspaceFolder}/app/",
+				]
+			},
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Flash Bootloader",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"linux": {
+				"command": "west",
+				"args": [
+					"flash",
+					"-d",
+					"build_mcuboot",
+				]
+			},
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Build Signed Image",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"command": "west build -b ${config:BOARD} ${config:PROJECT} -- -DOVERLAY_CONFIG=\"${workspaceFolder}/app/debug.conf;${workspaceFolder}/app/overlay-mcumgr.conf;${workspaceFolder}/app/overlay-fs-log.conf\" -D'CONFIG_MCUBOOT_EXTRA_IMGTOOL_ARGS:STRING=\"--version 0.0.0+0\"'",
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Flash Signed Image",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"command": "west flash -d build",
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Clean Build (Debug)",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"linux": {
+				"command": "west",
+				"args": [
+					"build",
+					"-p",
+					"auto",
+					"-b",
+					"${config:BOARD}",
+					"${config:PROJECT}",
+					"--",
+					"-DOVERLAY_CONFIG=${workspaceFolder}/app/debug.conf",
+					"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+				]
+			},
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Build (BT-Debug)",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app"
+			},
+			"linux": {
+				"command": "west",
+				"args": [
+					"build",
+					"-b",
+					"${config:BOARD}",
+					"${config:PROJECT}",
+					"--",
+					"-DOVERLAY_CONFIG=\"${workspaceFolder}/app/debug.conf;${workspaceFolder}/app/overlay-bt.conf\"",
+					"-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+				]
+			},
+			"problemMatcher": {
+				"base": "$gcc",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}/build"
+				]
+			}
+		},
+		{
+			"label": "Clean",
+			"type": "shell",
+			"group": "build",
+			"linux": {
+				"command": "rm",
+				"args": [
+					"-rf",
+					"${workspaceFolder}/app/build"
+				]
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Run Integration Tests on microbot",
+			"type": "shell",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/app/"
+			},
+			"linux": {
+				"command": "/zephyrproject/zephyr/scripts/twister",
+				"args": [
+					"-G", // integration testing
+					"-W", // disable warnings as errors
+					"--board-root",
+					"boards/",
+					"--device-testing",
+					"--hardware-map",
+					"tests/map.yml",
+					"-p",
+					"microbot",
+					"-T",
+					"tests/",
+					"-vvv",
+					"-x=BOARD_ROOT=${workspaceFolder}/app/",
+				]
+			}
+		},
+		{
+			"label": "Run Unit Tests on native_posix",
+			"type": "shell",
+			"group": "build",
+			"command": "rm -rf twister-out;/zephyrproject/zephyr/scripts/twister --coverage --coverage-basedir . --coverage-tool gcovr --coverage-formats=xml,html -p native_posix -T app/tests/",
+		},
+		{
+			"label": "Run Unit Tests on native_posix (no coverage)",
+			"type": "shell",
+			"group": "build",
+			"command": "rm -rf twister-out;/zephyrproject/zephyr/scripts/twister -W -p native_posix -T app/tests/",
+		},
+		{
+			"label": "Generate CI Unit Test report",
+			"type": "shell",
+			"group": "build",
+			"dependsOn": "Run Unit Tests on native_posix",
+			"command": "gcovr -r . --gcov-executable gcov -e .*generated.* -e app/tests -e twister-out --xml-pretty --print-summary -o twister-out/coverage.xml",
+		},
+		{
+			"label": "Build Docs (Doxygen)",
+			"type": "shell",
+			"group": "build",
+			"command": "doxygen docs/Doxyfile",
+		}
+	]
+}
