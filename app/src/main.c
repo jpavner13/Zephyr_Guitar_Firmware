@@ -1,62 +1,149 @@
+#include <inttypes.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/printk.h>
-#include <inttypes.h>
+#include <zephyr/drivers/adc.h>
+// #include <zephyr/drivers/pwm.h>
 
-// Define thread stack size and priority
+// DEFINE THREAT STACK SIZE AND PRIORITY
 #define STACKSIZE 1024
-#define BUTTON_PRIORITY 7
-#define BLINK_PRIORITY 7
+#define PLAY_PRIORITY 7
 
-// INITIALIZE THE USER BUTTON
-#define SW0_NODE DT_ALIAS(sw0)
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
+// INITIALIZE ANALOG CHANNELS
+#define DT_SPEC_AND_COMMA(node_id, prop, idx) \
+	ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
 
-// INITIALIZE THE ON BOARD LED
-static struct gpio_dt_spec onboardLed = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
+static const struct adc_dt_spec adc_channels[2] = {
+	DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA)
+};
 
-// INITIALIZE THE RED LED
-static struct gpio_dt_spec led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(redled), gpios, {0});
+uint16_t buf;
+struct adc_sequence sequence = {
+  .buffer = &buf,
+  .buffer_size = sizeof(buf),
+};
 
-// Thread 0 Function
-void buttonLED(void)
+// INITIALIZE THE SOLENOIDS
+static const struct gpio_dt_spec solenoid_1 = GPIO_DT_SPEC_GET_OR(DT_ALIAS(d8), gpios, {0});
+int32_t lastTimeFired = 0;
+
+// Function to fire the passed solenoid to play the corresponding string
+void fireSolenoid(struct gpio_dt_spec solenoid)
 {
-  while (1) 
-  {
-    int val = gpio_pin_get_dt(&button);
+  int32_t startTime = k_uptime_get();
+  int32_t currTime = k_uptime_get();
 
-    if (val >= 0) 
+  int cooldownTime = 200;
+  int32_t fireSpeed = 50;
+
+  if(currTime - lastTimeFired > cooldownTime)
+  {
+    gpio_pin_set_dt(&solenoid, 0);
+
+    bool doneFiring = false;
+
+    while(!doneFiring)
     {
-      gpio_pin_set_dt(&led, val);
+      if(currTime - startTime > fireSpeed)
+      {
+        gpio_pin_set_dt(&solenoid, 1);
+        lastTimeFired = k_uptime_get(); 
+        doneFiring = true;
+        break;
+      }
+      currTime = k_uptime_get();
+      k_usleep(10);
     }
   }
 }
 
-// Thread 1 Function
-void blink()
+// Main thread function for controlling playing
+void playGuitar()
 {
-  while(1)
+  int photoResistorTolereance = 3200;
+  int flexSensorTolerence = 1000;
+
+  gpio_pin_set_dt(&solenoid_1, 1);
+
+  int32_t photoResistor1Value;
+  int32_t flexSensor1Value;
+
+  int err;
+
+  while(true)
   {
-    if((k_uptime_get() % 1000) == 0)
+    // Read the photoresistor
+    (void)adc_sequence_init_dt(&adc_channels[0], &sequence);
+
+    // Check to make sure the photo resistor read an expected value
+    err = adc_read(adc_channels[0].dev, &sequence);
+    if (err < 0) 
     {
-      gpio_pin_toggle_dt(&onboardLed);
+      printk("Could not read (%d)\n", err);
+      continue;
+    }
+
+    photoResistor1Value = (int32_t)buf;
+
+    // Test if laser has been broken
+    if(photoResistor1Value < photoResistorTolereance)
+    {
+      fireSolenoid(solenoid_1);
+    }
+
+    // Read the flex sensor
+    (void)adc_sequence_init_dt(&adc_channels[1], &sequence);
+
+    // Check to make sure the flex sensor read an expected value
+    err = adc_read(adc_channels[1].dev, &sequence);
+    if (err < 0) 
+    {
+      printk("Could not read (%d)\n", err);
+      continue;
+    }
+
+    flexSensor1Value = (int32_t)buf;
+
+    // Test if flex sensor has been hit
+    if(flexSensor1Value < flexSensorTolerence)
+    {
+      fireSolenoid(solenoid_1);
     }
   }
+  return;
 }
 
-// Main funtion (Basically a thread with priority 1)
+// Entry point. Configure peripherals
 void main()
 {
-  // Configure Button as an input
-  gpio_pin_configure_dt(&button, GPIO_INPUT);
-  gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
+  int err;
 
-  // Configure LED's as an output
-  gpio_pin_configure_dt(&onboardLed, GPIO_OUTPUT);
-  gpio_pin_configure_dt(&led, GPIO_OUTPUT);
+  // Configure solenoids
+  err = gpio_pin_configure_dt(&solenoid_1, GPIO_OUTPUT);
+  if(err < 0)
+  {
+    printk("Could not configure solenoid 1.");
+  }
+
+  // Set up analog inputs (photo resistor, flex sensor)
+	for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
+		if (!device_is_ready(adc_channels[i].dev)) {
+			printk("ADC controller device %s not ready\n", adc_channels[i].dev->name);
+		}
+
+		err = adc_channel_setup_dt(&adc_channels[i]);
+		if (err < 0) 
+    {
+			printk("Could not setup channel #%d (%d)\n", i, err);
+		}
+	}
 }
 
-K_THREAD_DEFINE(buttonLED_thread, STACKSIZE, buttonLED, NULL, NULL, NULL, BUTTON_PRIORITY, 0, 0);
-K_THREAD_DEFINE(blinkLED_thread, STACKSIZE, blink, NULL, NULL, NULL, BLINK_PRIORITY, 0, 0);
+// BEGIN THREADS
+K_THREAD_DEFINE(playGuitar_thread, STACKSIZE, playGuitar, NULL, NULL, NULL, PLAY_PRIORITY, 0, 0);

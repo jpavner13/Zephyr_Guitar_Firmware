@@ -1,80 +1,48 @@
-# Zephyr Example Application
+# Zephyr RTOS Template
 
-This repository contains a Zephyr example application. The main purpose of this
-repository is to serve as a reference on how to structure Zephyr-based
-applications. Some of the features demonstrated in this example are:
+Template to get started with Zephyr RTOS. When flashed, the onboard LED will blink every second.
 
-- Basic [Zephyr application][app_dev] skeleton
-- [Zephyr workspace applications][workspace_app]
-- [Zephyr modules][modules]
-- [West T2 topology][west_t2]
-- [Custom boards][board_porting]
-- Custom [devicetree bindings][bindings]
-- Out-of-tree [drivers][drivers]
-- Out-of-tree libraries
-- Example CI configuration (using Github Actions)
-- Custom [west extension][west_ext]
+## More example code can be found at:
+https://github.com/zephyrproject-rtos/zephyr/tree/main/samples
 
-This repository is versioned together with the [Zephyr main tree][zephyr]. This
-means that every time that Zephyr is tagged, this repository is tagged as well
-with the same version number, and the [manifest](west.yml) entry for `zephyr`
-will point to the corresponding Zephyr tag. For example, the `example-application`
-v2.6.0 will point to Zephyr v2.6.0. Note that the `main` branch always
-points to the development branch of Zephyr, also `main`.
+## Getting Started:
 
-[app_dev]: https://docs.zephyrproject.org/latest/develop/application/index.html
-[workspace_app]: https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-workspace-app
-[modules]: https://docs.zephyrproject.org/latest/develop/modules.html
-[west_t2]: https://docs.zephyrproject.org/latest/develop/west/workspaces.html#west-t2
-[board_porting]: https://docs.zephyrproject.org/latest/guides/porting/board_porting.html
-[bindings]: https://docs.zephyrproject.org/latest/guides/dts/bindings.html
-[drivers]: https://docs.zephyrproject.org/latest/reference/drivers/index.html
-[zephyr]: https://github.com/zephyrproject-rtos/zephyr
-[west_ext]: https://docs.zephyrproject.org/latest/develop/west/extensions.html
+Before getting started, make sure you have a proper VS Code and Docker
+environment. 
 
-## Getting Started
+- Download and install [VS Code](https://code.visualstudio.com/)
+- Install [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)
+- Download and install [Docker for Windows](https://docs.docker.com/desktop/windows/install/)
+- Download and install [usbipd-win](https://github.com/dorssel/usbipd-win/releases) and follow 
+the [instructions](https://github.com/dorssel/usbipd-win/wiki/WSL-support#usbip-client-tools) 
+for USB/IP client tools.
+- Download and install the [wsl-usb-gui](https://gitlab.com/alelec/wsl-usb-gui/-/releases) tool.
 
-Before getting started, make sure you have a proper Zephyr development
-environment. Follow the official
-[Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/getting_started/index.html).
+Once complete, open this repository in VS Code. When prompted, re-open in a dev container. 
 
-### Initialization
+VS Code will build the Docker image defined in [.devcontainer/Dockerfile](.devcontainer/Dockerfile), 
+and may take some time on first setup. The Zephyr repositories will be installed as well.
 
-The first step is to initialize the workspace folder (``my-workspace``) where
-the ``example-application`` and all Zephyr modules will be cloned. Run the following
-command:
+The main.c file is the entry point of your Zephyr project.
 
-```shell
-# initialize my-workspace for the example-application (main branch)
-west init -m https://github.com/zephyrproject-rtos/example-application --mr main my-workspace
-# update Zephyr modules
-cd my-workspace
-west update
+If you need to configure pins on your board, modify the .dts file of the respective board in `/zephyrproject/zephyr/boards`. GPIO pins can usually be configured as led's or buttons. For more information visit https://docs.zephyrproject.org/latest/hardware/peripherals/gpio.html
+
+## Compile code with:
+`west build -b $BOARD app`
+
+## Flash code with:
+`west flash -d build`
+
+#### Some '$BOARD' examples are
+```
+nucleo_f303re
+nucleo_f429zi
+arduino_portenta_h7
 ```
 
-### Building and running
+All boards can be listed with `'west boards'`
 
-To build the application, run the following command:
+### All supported boards can be found in 
+`/zephyrproject/zephyr/boards`
 
-```shell
-west build -b $BOARD app
-```
-
-where `$BOARD` is the target board.
-
-You can use the `custom_plank` board found in this
-repository. Note that Zephyr sample boards may be used if an
-appropriate overlay is provided (see `app/boards`).
-
-A sample debug configuration is also provided. To apply it, run the following
-command:
-
-```shell
-west build -b $BOARD app -- -DOVERLAY_CONFIG=debug.conf
-```
-
-Once you have built the application, run the following command to flash it:
-
-```shell
-west flash
-```
+Note: This directory can't be accessed in GitLab. In order to access it, clone the repository, build the dev container, and then run `cd zephyrproject/zephyr/boards` in the working directory. Most boards are in the `/arm` folder.

@@ -195,30 +195,6 @@ RUN \
     west update --narrow -o=--depth=1 && \
 	west zephyr-export
 
-# Remove un-needed and large packages
-RUN \
-	rm -rf /zephyrproject/modules/lib/canopennode && \
-	rm -rf /zephyrproject/modules/lib/gui && \
-	rm -rf /zephyrproject/modules/lib/openthread && \
-	rm -rf /zephyrproject/modules/lib/tflite-micro && \
-	rm -rf /zephyrproject/modules/hal/altera && \
-	rm -rf /zephyrproject/modules/hal/atmel && \
-	rm -rf /zephyrproject/modules/hal/espressif && \
-	rm -rf /zephyrproject/modules/hal/gigadevice && \
-	rm -rf /zephyrproject/modules/hal/infineon && \
-	rm -rf /zephyrproject/modules/hal/microchip && \
-	rm -rf /zephyrproject/modules/hal/nuvoton && \
-	rm -rf /zephyrproject/modules/hal/nxp && \
-	rm -rf /zephyrproject/modules/hal/openisa && \
-	rm -rf /zephyrproject/modules/hal/quicklogic && \
-	rm -rf /zephyrproject/modules/hal/renesas && \
-	rm -rf /zephyrproject/modules/hal/rpi_pico && \
-	rm -rf /zephyrproject/modules/hal/silabs && \
-	rm -rf /zephyrproject/modules/hal/telink && \
-	rm -rf /zephyrproject/modules/hal/ti && \
-	rm -rf /zephyrproject/modules/hal/wurthelektronik && \
-	rm -rf /zephyrproject/modules/hal/xtensa
-
 # Install udev for serial monitor
 RUN apt-get -y update && \
 	apt-get -y upgrade && \
@@ -228,7 +204,7 @@ RUN apt-get -y update && \
 RUN apt-get -y update && \
 	apt-get -y upgrade && \
 	apt-get install --no-install-recommends -y gdb && \
-	apt-get install usbutils \
-	apt install linux-tools-virtual hwdata
+	apt-get install -y usbutils && \
+	apt install -y linux-tools-virtual hwdata
 
 ENV ZEPHYR_BASE=/zephyrproject/zephyr

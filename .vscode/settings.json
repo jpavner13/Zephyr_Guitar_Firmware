@@ -17,6 +17,9 @@
         "gpio.h": "c",
         "zephyr.h": "c",
         "board.h": "c",
-        "printk.h": "c"
+        "printk.h": "c",
+        "dac.h": "c",
+        "inttypes.h": "c",
+        "adc.h": "c"
     },
 }
